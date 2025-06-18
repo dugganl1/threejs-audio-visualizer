@@ -3,7 +3,6 @@ import { EffectComposer } from "three/examples/jsm/postprocessing/EffectComposer
 import { RenderPass } from "three/examples/jsm/postprocessing/RenderPass.js";
 import { UnrealBloomPass } from "three/examples/jsm/postprocessing/UnrealBloomPass.js";
 import { OutputPass } from "three/examples/jsm/postprocessing/OutputPass.js";
-import { GUI } from "lil-gui";
 
 const renderer = new THREE.WebGLRenderer({ antialias: true });
 renderer.setSize(window.innerWidth, window.innerHeight);
@@ -41,19 +40,38 @@ audioLoader.load("/bicep_apricots.mp3", function (buffer) {
   sound.setBuffer(buffer);
   window.addEventListener("click", function () {
     sound.play();
+    // Transition the text island to show buttons
+    const textIsland = document.getElementById("text-island");
+    const islandText = document.getElementById("island-text");
+    const islandButtons = document.getElementById("island-buttons");
+    if (islandText && islandButtons) {
+      islandText.style.display = "none";
+      islandButtons.style.display = "flex";
+    }
   });
+
+  // Optionally, fade out the island if 'END CALL' is clicked
+  const endCallBtn = document.getElementById("end-call-btn");
+  if (endCallBtn) {
+    endCallBtn.addEventListener("click", function () {
+      const textIsland = document.getElementById("text-island");
+      if (textIsland) {
+        textIsland.classList.add("playing");
+      }
+    });
+  }
 });
 
 const analyser = new THREE.AudioAnalyser(sound, 32);
 
 // Create the parameters object
 const params = {
-  red: 1.0,
-  green: 1.0,
-  blue: 1.0,
+  red: 0.302, // 77/255
+  green: 0.886, // 226/255
+  blue: 0.961, // 245/255
   threshold: 0.5,
-  strength: 0.4,
-  radius: 0.8,
+  strength: 0.5,
+  radius: 0.1,
 };
 
 // Create post-processing passes
@@ -92,31 +110,6 @@ const mat = new THREE.ShaderMaterial({
 const geo = new THREE.IcosahedronGeometry(4, 30);
 const mesh = new THREE.Mesh(geo, mat);
 scene.add(mesh);
-
-// Create GUI
-const gui = new GUI();
-
-const colorsFolder = gui.addFolder("Colors");
-colorsFolder.add(params, "red", 0, 1).onChange(function (value) {
-  uniforms.u_red.value = Number(value);
-});
-colorsFolder.add(params, "green", 0, 1).onChange(function (value) {
-  uniforms.u_green.value = Number(value);
-});
-colorsFolder.add(params, "blue", 0, 1).onChange(function (value) {
-  uniforms.u_blue.value = Number(value);
-});
-
-const bloomFolder = gui.addFolder("Bloom");
-bloomFolder.add(params, "threshold", 0, 1).onChange(function (value) {
-  bloomPass.threshold = Number(value);
-});
-bloomFolder.add(params, "strength", 0, 3).onChange(function (value) {
-  bloomPass.strength = Number(value);
-});
-bloomFolder.add(params, "radius", 0, 1).onChange(function (value) {
-  bloomPass.radius = Number(value);
-});
 
 const clock = new THREE.Clock();
 
