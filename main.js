@@ -32,6 +32,8 @@ document.addEventListener("mousemove", function (e) {
 
 const listener = new THREE.AudioListener();
 camera.add(listener);
+let analyser = null; // global
+let micStream = null; // store the MediaStream
 
 const sound = new THREE.Audio(listener);
 
@@ -56,6 +58,38 @@ audioLoader.load("/bicep_apricots.mp3", function (buffer) {
     }
   }
 
+  // Microphone access function
+  function requestMicrophoneAccess() {
+    navigator.mediaDevices
+      .getUserMedia({ audio: true })
+      .then(function (stream) {
+        micStream = stream; // store the stream globally
+        console.log("Microphone access granted!", stream);
+        // Resume AudioContext if suspended
+        const audioContext = listener.context;
+        if (audioContext.state === "suspended") {
+          audioContext.resume().then(() => {
+            console.log("AudioContext resumed");
+          });
+        }
+        // Create Three.js audio from stream
+        const micAudio = new THREE.Audio(listener);
+        micAudio.setMediaStreamSource(stream);
+        analyser = new THREE.AudioAnalyser(micAudio, 32);
+        console.log("THREE.AudioAnalyser created from mic:", analyser);
+        // Test frequency
+        setTimeout(() => {
+          if (analyser) {
+            console.log("Test getAverageFrequency:", analyser.getAverageFrequency());
+          }
+        }, 1000);
+      })
+      .catch(function (err) {
+        console.error("Microphone access denied:", err);
+        alert("Microphone access denied. Please allow microphone access to use the visualizer.");
+      });
+  }
+
   // Initial clickable state
   updateIslandClickable();
 
@@ -64,7 +98,7 @@ audioLoader.load("/bicep_apricots.mp3", function (buffer) {
   if (textIsland) {
     textIsland.addEventListener("click", function (e) {
       if (isIslandInitial()) {
-        sound.play();
+        requestMicrophoneAccess();
         // Transition the text island to show buttons
         const islandText = document.getElementById("island-text");
         const islandButtons = document.getElementById("island-buttons");
@@ -87,7 +121,7 @@ audioLoader.load("/bicep_apricots.mp3", function (buffer) {
       return;
     }
     if (isIslandInitial()) {
-      sound.play();
+      requestMicrophoneAccess();
       // Transition the text island to show buttons
       const islandText = document.getElementById("island-text");
       const islandButtons = document.getElementById("island-buttons");
@@ -104,9 +138,13 @@ audioLoader.load("/bicep_apricots.mp3", function (buffer) {
   if (endCallBtn) {
     endCallBtn.addEventListener("click", function (e) {
       e.stopPropagation(); // Prevent window click handler from firing
-      // Stop and reset audio
-      if (sound.isPlaying) {
-        sound.stop();
+      // Stop and reset audio (not needed for mic, but reset UI)
+      // Stop the mic stream if it exists
+      if (micStream) {
+        micStream.getTracks().forEach((track) => track.stop());
+        micStream = null;
+        analyser = null;
+        console.log("Microphone stream stopped and analyser reset.");
       }
       // Restore UI to initial state
       const textIsland = document.getElementById("text-island");
@@ -124,15 +162,13 @@ audioLoader.load("/bicep_apricots.mp3", function (buffer) {
   }
 });
 
-const analyser = new THREE.AudioAnalyser(sound, 32);
-
 // Create the parameters object
 const params = {
   red: 0.302, // 77/255
   green: 0.886, // 226/255
   blue: 0.961, // 245/255
   threshold: 0.5,
-  strength: 0.5,
+  strength: 0.4,
   radius: 0.1,
 };
 
@@ -181,7 +217,12 @@ function animate() {
   camera.position.y += (-mouseY - camera.position.y) * 0.5;
   camera.lookAt(scene.position);
 
-  uniforms.u_frequency.value = analyser.getAverageFrequency();
+  // Use analyser if available
+  if (analyser) {
+    uniforms.u_frequency.value = analyser.getAverageFrequency();
+  } else {
+    uniforms.u_frequency.value = 0.0;
+  }
   uniforms.u_time.value = clock.getElapsedTime();
   bloomComposer.render();
   requestAnimationFrame(animate);
