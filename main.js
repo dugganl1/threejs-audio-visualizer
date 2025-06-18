@@ -38,26 +38,88 @@ const sound = new THREE.Audio(listener);
 const audioLoader = new THREE.AudioLoader();
 audioLoader.load("/bicep_apricots.mp3", function (buffer) {
   sound.setBuffer(buffer);
-  window.addEventListener("click", function () {
-    sound.play();
-    // Transition the text island to show buttons
-    const textIsland = document.getElementById("text-island");
+
+  // Helper to check if the island is in initial state
+  function isIslandInitial() {
     const islandText = document.getElementById("island-text");
-    const islandButtons = document.getElementById("island-buttons");
-    if (islandText && islandButtons) {
-      islandText.style.display = "none";
-      islandButtons.style.display = "flex";
+    return islandText && islandText.style.display !== "none";
+  }
+
+  // Set clickable class on island in initial state
+  function updateIslandClickable() {
+    const textIsland = document.getElementById("text-island");
+    if (!textIsland) return;
+    if (isIslandInitial()) {
+      textIsland.classList.add("clickable");
+    } else {
+      textIsland.classList.remove("clickable");
+    }
+  }
+
+  // Initial clickable state
+  updateIslandClickable();
+
+  // Click handler for the island
+  const textIsland = document.getElementById("text-island");
+  if (textIsland) {
+    textIsland.addEventListener("click", function (e) {
+      if (isIslandInitial()) {
+        sound.play();
+        // Transition the text island to show buttons
+        const islandText = document.getElementById("island-text");
+        const islandButtons = document.getElementById("island-buttons");
+        if (islandText && islandButtons) {
+          islandText.style.display = "none";
+          islandButtons.style.display = "flex";
+        }
+        updateIslandClickable();
+        e.stopPropagation(); // Prevent window click from firing too
+      }
+    });
+  }
+
+  // Global click handler for background
+  window.addEventListener("click", function (e) {
+    // Only start audio if not clicking on the text island or its children
+    const textIsland = document.getElementById("text-island");
+    if (textIsland && textIsland.contains(e.target)) {
+      // Let the island handle its own click
+      return;
+    }
+    if (isIslandInitial()) {
+      sound.play();
+      // Transition the text island to show buttons
+      const islandText = document.getElementById("island-text");
+      const islandButtons = document.getElementById("island-buttons");
+      if (islandText && islandButtons) {
+        islandText.style.display = "none";
+        islandButtons.style.display = "flex";
+      }
+      updateIslandClickable();
     }
   });
 
-  // Optionally, fade out the island if 'END CALL' is clicked
+  // END CALL button logic
   const endCallBtn = document.getElementById("end-call-btn");
   if (endCallBtn) {
-    endCallBtn.addEventListener("click", function () {
-      const textIsland = document.getElementById("text-island");
-      if (textIsland) {
-        textIsland.classList.add("playing");
+    endCallBtn.addEventListener("click", function (e) {
+      e.stopPropagation(); // Prevent window click handler from firing
+      // Stop and reset audio
+      if (sound.isPlaying) {
+        sound.stop();
       }
+      // Restore UI to initial state
+      const textIsland = document.getElementById("text-island");
+      const islandText = document.getElementById("island-text");
+      const islandButtons = document.getElementById("island-buttons");
+      if (textIsland) {
+        textIsland.classList.remove("playing");
+      }
+      if (islandText && islandButtons) {
+        islandText.style.display = "inline";
+        islandButtons.style.display = "none";
+      }
+      updateIslandClickable();
     });
   }
 });

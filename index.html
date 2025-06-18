@@ -24,84 +24,10 @@
       href="https://fonts.googleapis.com/css2?family=VT323&display=swap"
       rel="stylesheet"
     />
-    <style>
-      body {
-        margin: 0;
-        font-family: "VT323", monospace;
-        overflow: hidden;
-        background: #111;
-      }
-      #text-island {
-        position: absolute;
-        top: 50%;
-        left: 50%;
-        transform: translate(-50%, -50%);
-        background: rgba(20, 20, 20, 0.55);
-        padding: 6px 18px;
-        border-radius: 18px;
-        font-family: "VT323", monospace;
-        color: #fff;
-        font-size: 1.3rem;
-        text-transform: uppercase;
-        letter-spacing: 0.5px;
-        text-align: center;
-        box-shadow: 0 2px 16px 0 rgba(0, 0, 0, 0.3);
-        z-index: 100;
-        pointer-events: none;
-        transition: opacity 0.5s;
-        opacity: 0.95;
-        backdrop-filter: blur(8px);
-        -webkit-backdrop-filter: blur(8px);
-      }
-      #text-island.playing {
-        opacity: 0;
-      }
-      #island-buttons {
-        display: flex;
-        flex-direction: row;
-        gap: 18px;
-        justify-content: center;
-        align-items: center;
-        margin-top: 2px;
-      }
-      .island-interrupt {
-        font-family: "VT323", monospace;
-        font-size: 1.18rem;
-        color: #e0e0e0;
-        letter-spacing: 0.5px;
-        text-transform: uppercase;
-        opacity: 0.85;
-        margin: 0 0 0 0;
-        padding: 0 8px;
-        user-select: none;
-        font-weight: 400;
-      }
-      .island-btn {
-        font-family: "VT323", monospace;
-        font-size: 1.1rem;
-        text-transform: uppercase;
-        letter-spacing: 0.5px;
-        padding: 6px 18px;
-        border-radius: 14px;
-        border: none;
-        outline: none;
-        background: rgba(255, 255, 255, 0.08);
-        color: #fff;
-        box-shadow: 0 1px 6px 0 rgba(0, 0, 0, 0.15);
-        transition: background 0.2s, color 0.2s, opacity 0.2s;
-        margin: 0;
-      }
-      .island-btn.primary {
-        opacity: 1;
-        cursor: pointer;
-        background: rgba(255, 60, 60, 0.18);
-        color: #fff;
-        border: 1.5px solid #ff3c3c;
-      }
-      .island-btn.primary:hover {
-        background: rgba(255, 60, 60, 0.32);
-      }
-    </style>
+    <link
+      rel="stylesheet"
+      href="style.css"
+    />
   </head>
   <body>
     <div id="text-island">
