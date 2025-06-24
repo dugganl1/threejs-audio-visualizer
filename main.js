@@ -34,6 +34,9 @@ const listener = new THREE.AudioListener();
 camera.add(listener);
 let analyser = null; // global
 let micStream = null; // store the MediaStream
+let audioContext = null; // Web Audio context
+let micSource = null; // MediaStreamAudioSourceNode
+let targetFrequency = 0; // for smooth transition
 
 const sound = new THREE.Audio(listener);
 
@@ -63,25 +66,29 @@ audioLoader.load("/bicep_apricots.mp3", function (buffer) {
     navigator.mediaDevices
       .getUserMedia({ audio: true })
       .then(function (stream) {
-        micStream = stream; // store the stream globally
+        micStream = stream;
         console.log("Microphone access granted!", stream);
+        // Create or reuse AudioContext
+        if (!audioContext) {
+          audioContext = new (window.AudioContext || window.webkitAudioContext)();
+        }
         // Resume AudioContext if suspended
-        const audioContext = listener.context;
         if (audioContext.state === "suspended") {
           audioContext.resume().then(() => {
             console.log("AudioContext resumed");
           });
         }
-        // Create Three.js audio from stream
-        const micAudio = new THREE.Audio(listener);
-        micAudio.setMediaStreamSource(stream);
-        analyser = new THREE.AudioAnalyser(micAudio, 32);
-        console.log("THREE.AudioAnalyser created from mic:", analyser);
-        // Test frequency
+        // Create MediaStreamSource and AnalyserNode
+        micSource = audioContext.createMediaStreamSource(stream);
+        analyser = audioContext.createAnalyser();
+        analyser.fftSize = 64; // 32 bins, similar to previous
+        micSource.connect(analyser);
+        // Do NOT connect to audioContext.destination (no echo)
+        // Test frequency data
+        const freqData = new Uint8Array(analyser.frequencyBinCount);
         setTimeout(() => {
-          if (analyser) {
-            console.log("Test getAverageFrequency:", analyser.getAverageFrequency());
-          }
+          analyser.getByteFrequencyData(freqData);
+          console.log("Test Web Audio API frequency data:", freqData);
         }, 1000);
       })
       .catch(function (err) {
@@ -168,7 +175,7 @@ const params = {
   green: 0.886, // 226/255
   blue: 0.961, // 245/255
   threshold: 0.5,
-  strength: 0.4,
+  strength: 0.3,
   radius: 0.1,
 };
 
@@ -211,6 +218,18 @@ scene.add(mesh);
 
 const clock = new THREE.Clock();
 
+const THRESHOLD = 40; // Sensitivity threshold for average frequency
+
+function getAverageFrequencyFromAnalyser(analyser) {
+  const freqData = new Uint8Array(analyser.frequencyBinCount);
+  analyser.getByteFrequencyData(freqData);
+  let sum = 0;
+  for (let i = 0; i < freqData.length; i++) {
+    sum += freqData[i];
+  }
+  return sum / freqData.length;
+}
+
 function animate() {
   // Dynamic camera movement
   camera.position.x += (mouseX - camera.position.x) * 0.05;
@@ -219,10 +238,14 @@ function animate() {
 
   // Use analyser if available
   if (analyser) {
-    uniforms.u_frequency.value = analyser.getAverageFrequency();
+    let avg = getAverageFrequencyFromAnalyser(analyser);
+    targetFrequency = avg > THRESHOLD ? avg : 0;
   } else {
-    uniforms.u_frequency.value = 0.0;
+    targetFrequency = 0.0;
   }
+  // Smoothly interpolate (lerp) the frequency value
+  uniforms.u_frequency.value += (targetFrequency - uniforms.u_frequency.value) * 0.07;
+
   uniforms.u_time.value = clock.getElapsedTime();
   bloomComposer.render();
   requestAnimationFrame(animate);
